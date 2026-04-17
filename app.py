@@ -477,7 +477,7 @@ elif page == "🎯 Jira Status":
             )
             
             bi_with_ac = st.number_input(
-                "Dintre acestea, câte au AC complete?",
+                "Dintre acestea, câte specs complete?",
                 min_value=0,
                 max_value=bi_backlog_ref,
                 value=st.session_state.jira_data.get('BI', {}).get('with_ac', 0),
