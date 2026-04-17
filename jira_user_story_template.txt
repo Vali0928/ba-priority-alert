@@ -1,0 +1,267 @@
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    JIRA USER STORY TEMPLATE - BA OPTIMIZAT                 ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📌 EXEMPLU COMPLETAT (Folosește ca model)
+═══════════════════════════════════════════════════════════════════════════════
+
+JIRA TICKET: DATA-1234
+TYPE: Story
+LABELS: BI, Dashboard, Finance
+STATUS: Backlog refinement
+SPRINT: [Refinement Queue]
+
+───────────────────────────────────────────────────────────────────────────────
+📋 SUMMARY (Titlu scurt, acționabil)
+───────────────────────────────────────────────────────────────────────────────
+
+Dashboard Transportation Cost Variance - Regional View
+
+───────────────────────────────────────────────────────────────────────────────
+👤 USER STORY (Format: As a [role], I want [action], So that [benefit])
+───────────────────────────────────────────────────────────────────────────────
+
+As a **Regional Finance Manager**,
+I want to **visualize transportation cost variance per country compared to budget**,
+So that I can **identify cost overruns early and take corrective actions**.
+
+───────────────────────────────────────────────────────────────────────────────
+📊 BUSINESS CONTEXT (De ce este important? Care e impactul?)
+───────────────────────────────────────────────────────────────────────────────
+
+PROBLEMA:
+  • Costurile de transport în Q1 2026 au depășit bugetul cu 12% în regiunea Sud-Est
+  • Finance team nu are vizibilitate real-time pe deviații la nivel de țară
+  • Procesul actual: export manual din SAP + Excel pivots (2 zile de lucru)
+
+VALOARE AȘTEPTATĂ:
+  • Reducere timp analiză: de la 2 zile → 15 minute
+  • Identificare early warning: cost overruns detectate în aceeași zi
+  • ROI: economii estimate €50K/an prin acțiuni corective rapide
+
+STAKEHOLDER:
+  • Requestor: Roxana Ene (Finance Manager)
+  • Approver: Vasile Iordache (CFO)
+  • End Users: Regional Finance Managers (5 persoane)
+
+───────────────────────────────────────────────────────────────────────────────
+✅ ACCEPTANCE CRITERIA (Format: Given/When/Then - Gherkin)
+───────────────────────────────────────────────────────────────────────────────
+
+AC1: Vizualizare variance cost per țară
+  GIVEN I am a Finance Manager
+  WHEN I open the Transportation Cost Dashboard
+  THEN I see a bar chart showing Actual vs Budget cost per country for current quarter
+
+AC2: Drill-down pe categorie cost
+  GIVEN I click on a country bar in the chart
+  WHEN the detail view opens
+  THEN I see cost breakdown by: Fuel, Labor, Maintenance, Other
+  AND I see variance % for each category
+
+AC3: Filtru temporal
+  GIVEN I am on the dashboard
+  WHEN I select a time period (Month/Quarter/YTD)
+  THEN the chart updates with data for selected period
+  AND budget comparison is recalculated
+
+AC4: Export pentru management
+  GIVEN I need to present data in a meeting
+  WHEN I click "Export to Excel"
+  THEN I receive a formatted Excel file with:
+    - Summary table (Country, Actual, Budget, Variance %)
+    - Chart image embedded
+    - Data refreshed as of [current date]
+
+AC5: Performance
+  GIVEN the dashboard loads
+  WHEN I apply any filter
+  THEN response time is < 3 seconds for data refresh
+
+───────────────────────────────────────────────────────────────────────────────
+📂 DATA REQUIREMENTS (Surse, granularitate, refresh)
+───────────────────────────────────────────────────────────────────────────────
+
+DATA SOURCES:
+  • SAP FI-CO: tabla BSEG (actual costs)
+  • Budget Excel: "2026_Budget_Transport.xlsx" (SharePoint)
+  • Exchange Rates: ECB API (pentru conversie EUR)
+
+GRANULARITATE:
+  • Temporal: Daily actuals, Monthly budget
+  • Geografic: Country level (8 țări: RO, BG, HU, GR, CZ, SK, PL, HR)
+  • Categorie: Fuel, Labor, Maintenance, Other
+
+DATA REFRESH:
+  • Actuals: Daily at 06:00 AM (incremental load)
+  • Budget: Manual upload la începutul fiecărui an
+
+VOLUMETRIE:
+  • ~500K records/month (actuals)
+  • Historical data: 24 months rolling window
+
+───────────────────────────────────────────────────────────────────────────────
+🎨 MOCKUP / WIREFRAME
+───────────────────────────────────────────────────────────────────────────────
+
+[Attachment: dashboard_mockup_v1.png]
+
+LAYOUT:
+┌─────────────────────────────────────────────────────────────────┐
+│ FILTERS: [Quarter ▼] [Country: All ▼]        [Export Excel]   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  KPI CARDS:                                                     │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                          │
+│  │ Actual  │ │ Budget  │ │Variance │                          │
+│  │ €2.4M   │ │ €2.1M   │ │  +14%  │                          │
+│  └─────────┘ └─────────┘ └─────────┘                          │
+│                                                                 │
+│  BAR CHART: Actual vs Budget by Country                        │
+│  ║████████▓▓▓▓ Romania                                         │
+│  ║██████▓▓▓ Bulgaria                                           │
+│  ║███████▓▓▓▓ Hungary                                          │
+│  (Legend: ████ Actual, ▓▓▓▓ Budget)                           │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│ DRILL-DOWN: Cost Breakdown (appears on click)                  │
+│ [Pie chart: Fuel 45% | Labor 30% | Maintenance 20% | Other 5%] │
+└─────────────────────────────────────────────────────────────────┘
+
+───────────────────────────────────────────────────────────────────────────────
+🔗 DEPENDENCIES & RISKS
+───────────────────────────────────────────────────────────────────────────────
+
+DEPENDENCIES:
+  ✅ DATA-1100: SAP BSEG table integration (DONE)
+  🔄 DATA-1205: Budget upload automation (IN PROGRESS - estimate 2 weeks)
+  ❌ DATA-1250: Exchange rate API setup (BLOCKED - waiting IT approval)
+
+RISKS:
+  • Budget data quality: mismatch cost categories between Excel and SAP
+    → Mitigation: mapping table created in Confluence (link)
+  • SAP performance: BSEG query poate fi lent (500K records)
+    → Mitigation: incremental load + aggregation table in DWH
+
+TECHNICAL NOTES:
+  • QlikSense app: "Finance_Transport_Analytics"
+  • Data model: Star schema (fact_transport_costs, dim_country, dim_category)
+  • Set analysis: Sum({<Year={$(=Max(Year))}, CostType={'Actual'}>} Cost)
+
+───────────────────────────────────────────────────────────────────────────────
+📅 ESTIMATION & TIMELINE
+───────────────────────────────────────────────────────────────────────────────
+
+ESTIMATION (Story Points): [To be filled in refinement]
+  • Data extraction: __SP
+  • Dashboard development: __SP
+  • Testing & UAT: __SP
+  • TOTAL: __SP
+
+TIMELINE:
+  • Refinement: [Date]
+  • Sprint: [Sprint number]
+  • UAT: [Estimated date]
+  • Go-live: [Estimated date]
+
+───────────────────────────────────────────────────────────────────────────────
+📎 ATTACHMENTS & LINKS
+───────────────────────────────────────────────────────────────────────────────
+
+  • Mockup: dashboard_mockup_v1.png
+  • Data mapping: [Confluence link]
+  • Budget file: SharePoint/Finance/2026_Budget_Transport.xlsx
+  • Related tickets: DATA-1100, DATA-1205, DATA-1250
+  • Meeting notes: [Confluence - Kickoff 10 Apr 2026]
+
+───────────────────────────────────────────────────────────────────────────────
+✏️  DEFINITION OF DONE (Checklist pentru BA înainte de refinement)
+───────────────────────────────────────────────────────────────────────────────
+
+☐ User Story completată (As a/I want/So that)
+☐ Acceptance Criteria în format Gherkin (min 3 AC)
+☐ Mockup/wireframe atașat
+☐ Data sources documentate (tabel, coloane, refresh frequency)
+☐ Dependencies verificate (link către alte tichete)
+☐ Stakeholder aprobare primită (email/meeting notes)
+☐ Technical notes pentru devs (QlikSense app name, data model)
+☐ Status mutat în "Backlog refinement"
+☐ Label-uri adăugate (BI/DWH, departament, prioritate)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                         TEMPLATE GATA DE COPIAT                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+Copiază textul de mai jos în fiecare tichet Jira nou:
+
+───────────────────────────────────────────────────────────────────────────────
+
+SUMMARY:
+[Titlu scurt - ex: Dashboard X pentru departamentul Y]
+
+USER STORY:
+As a [rol],
+I want to [acțiune],
+So that [beneficiu].
+
+BUSINESS CONTEXT:
+PROBLEMA:
+  • 
+  • 
+
+VALOARE AȘTEPTATĂ:
+  • 
+  • 
+
+STAKEHOLDER:
+  • Requestor: 
+  • End Users: 
+
+ACCEPTANCE CRITERIA:
+
+AC1: [Titlu]
+  GIVEN 
+  WHEN 
+  THEN 
+
+AC2: [Titlu]
+  GIVEN 
+  WHEN 
+  THEN 
+
+DATA REQUIREMENTS:
+DATA SOURCES:
+  • [Sistem]: [tabel/fișier]
+
+GRANULARITATE:
+  • Temporal: 
+  • Geografic: 
+  • Categorie: 
+
+DATA REFRESH:
+  • 
+
+MOCKUP:
+[Attach file sau desenează în Confluence]
+
+DEPENDENCIES:
+  • [JIRA-XXX]: [descriere]
+
+RISKS:
+  • [Risc] → Mitigation: [soluție]
+
+───────────────────────────────────────────────────────────────────────────────
+
+✅ CHECKLIST ÎNAINTE DE REFINEMENT:
+☐ User Story
+☐ Min 3 Acceptance Criteria (Gherkin)
+☐ Data sources documentate
+☐ Mockup atașat
+☐ Dependencies verificate
+☐ Status = "Backlog refinement"
+☐ Labels adăugate
+

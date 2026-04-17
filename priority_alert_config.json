@@ -1,0 +1,69 @@
+{
+  "meeting_types": {
+    "BI Backlog Refinement": {
+      "requires_tickets": true,
+      "ticket_status": "Backlog refinement",
+      "ticket_type": [
+        "Story",
+        "Task"
+      ],
+      "lead_time_hours": 0,
+      "jira_filter": "status = 'Backlog refinement' AND labels = 'BI'"
+    },
+    "DWH - Backlog refinement": {
+      "requires_tickets": true,
+      "ticket_status": "Backlog refinement",
+      "ticket_type": [
+        "Story",
+        "Task"
+      ],
+      "lead_time_hours": 0,
+      "jira_filter": "status = 'Backlog refinement' AND labels = 'DWH'"
+    },
+    "Sprint Planning": {
+      "requires_tickets": true,
+      "ticket_status": "Next Sprint Prio",
+      "ticket_type": [
+        "Story",
+        "Task"
+      ],
+      "lead_time_hours": 24,
+      "jira_filter": "status = 'Next Sprint Prio'"
+    },
+    "Prioritization": {
+      "requires_tickets": true,
+      "ticket_status": "Create Specs",
+      "ticket_type": [
+        "Story"
+      ],
+      "lead_time_hours": 24,
+      "jira_filter": "status = 'Create Specs' AND story_points IS NOT EMPTY"
+    }
+  },
+  "alert_rules": {
+    "blocked_tickets": {
+      "check": "status = 'Blocked' OR labels CONTAINS 'blocked'",
+      "severity": "HIGH",
+      "action": "Unblock urgent sau escaladează"
+    },
+    "sprint_not_started": {
+      "check": "sprint = CURRENT AND status = 'Backlog'",
+      "severity": "MEDIUM",
+      "action": "Verifică cu devs de ce nu au luat în lucru"
+    },
+    "support_tickets": {
+      "check": "type = 'Task' AND labels CONTAINS 'support'",
+      "severity": "LOW",
+      "action": "Monitorizare zilnică"
+    },
+    "refinement_missing_ac": {
+      "check": "status = 'Backlog refinement' AND acceptance_criteria IS EMPTY",
+      "severity": "HIGH",
+      "action": "Completează AC înainte de refinement"
+    }
+  },
+  "notification_schedule": {
+    "daily": "09:00",
+    "pre_refinement": 24
+  }
+}
