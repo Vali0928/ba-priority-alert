@@ -312,7 +312,7 @@ if page == "📊 Dashboard":
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("În Backlog Refinement", data.get('backlog_refinement', 0))
-                    st.metric("Cu AC Complete", data.get('with_ac', 0))
+                    st.metric("Cu Specs Complete", data.get('with_ac', 0))
                     st.metric("Tichete Suport", data.get('support', 0))
                 
                 with col2:
@@ -328,7 +328,7 @@ if page == "📊 Dashboard":
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("În Backlog Refinement", data.get('backlog_refinement', 0))
-                    st.metric("Cu AC Complete", data.get('with_ac', 0))
+                    st.metric("Cu Specs Complete", data.get('with_ac', 0))
                     st.metric("Tichete Suport", data.get('support', 0))
                 
                 with col2:
