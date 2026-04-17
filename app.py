@@ -124,8 +124,8 @@ def calculate_alerts(jira_data):
                 'severity': 'HIGH',
                 'board': board,
                 'icon': '🔴',
-                'message': f"{missing_ac} tichet(e) fără Acceptance Criteria",
-                'action': 'Completează AC până JOI 18:00'
+                'message': f"{missing_ac} tichet(e) fără specificatii complete",
+                'action': 'Completează specs până JOI 11:30'
             })
         
         # MEDIUM: Sprint not started
