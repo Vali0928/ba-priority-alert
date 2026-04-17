@@ -1,7 +1,7 @@
 """
 🚨 PRIORITY ALERT SYSTEM - Interactive BA Dashboard
 User-friendly interface for Business Analysts team
-Version: 1.2 - OCR Enabled
+Version: 1.3 - OCR + Toast Alerts with Sound
 
 Run: streamlit run app.py
 """
@@ -35,6 +35,10 @@ if 'calendar_uploaded' not in st.session_state:
     st.session_state.calendar_uploaded = False
 if 'report_generated' not in st.session_state:
     st.session_state.report_generated = False
+if 'alert_shown' not in st.session_state:
+    st.session_state.alert_shown = False
+if 'enable_sound' not in st.session_state:
+    st.session_state.enable_sound = True
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -124,8 +128,8 @@ def calculate_alerts(jira_data):
                 'severity': 'HIGH',
                 'board': board,
                 'icon': '🔴',
-                'message': f"{missing_ac} tichet(e) fără specificatii complete",
-                'action': 'Completează specs până JOI 11:30'
+                'message': f"{missing_ac} tichet(e) fără Acceptance Criteria",
+                'action': 'Completează AC până JOI 18:00'
             })
         
         # MEDIUM: Sprint not started
@@ -139,6 +143,45 @@ def calculate_alerts(jira_data):
             })
     
     return alerts
+
+
+def show_priority_alert(alerts, enable_sound=True):
+    """
+    Show toast notifications with optional sound for priority alerts
+    
+    Args:
+        alerts: List of alert dictionaries
+        enable_sound: Boolean to enable/disable sound (default True)
+    """
+    if not alerts:
+        return
+    
+    high_alerts = [a for a in alerts if a['severity'] == 'HIGH']
+    medium_alerts = [a for a in alerts if a['severity'] == 'MEDIUM']
+    
+    # Show toast for HIGH priority alerts
+    if high_alerts:
+        for alert in high_alerts:
+            st.toast(
+                f"🔴 [{alert['board']}] {alert['message']}", 
+                icon="🚨"
+            )
+        
+        # Play sound for HIGH priority only
+        if enable_sound:
+            st.markdown("""
+                <audio autoplay>
+                    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869.wav" type="audio/wav">
+                </audio>
+            """, unsafe_allow_html=True)
+    
+    # Show toast for MEDIUM priority alerts (no sound)
+    if medium_alerts:
+        for alert in medium_alerts:
+            st.toast(
+                f"🟡 [{alert['board']}] {alert['message']}", 
+                icon="⚠️"
+            )
 
 
 def generate_report_text(meetings, jira_data, alerts):
@@ -208,6 +251,21 @@ if total_alerts > 0:
 else:
     st.sidebar.success("✅ Nu există blocaje")
 
+# Alert Settings
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🔔 Settings Alerte")
+
+enable_sound = st.sidebar.checkbox(
+    "Enable sound alerts", 
+    value=st.session_state.enable_sound,
+    help="Sunet doar pentru alerte HIGH priority"
+)
+st.session_state.enable_sound = enable_sound
+
+if st.sidebar.button("🔄 Reset alerte"):
+    st.session_state.alert_shown = False
+    st.rerun()
+
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Ultima actualizare: {datetime.now().strftime('%H:%M')}")
 
@@ -262,8 +320,15 @@ if page == "📊 Dashboard":
         
         st.markdown("---")
         
+        # Calculate alerts
         alerts = calculate_alerts(st.session_state.jira_data)
         
+        # Show toast + sound alerts (only once per session)
+        if alerts and not st.session_state.alert_shown:
+            show_priority_alert(alerts, enable_sound=st.session_state.enable_sound)
+            st.session_state.alert_shown = True
+        
+        # Display alerts section
         if alerts:
             st.markdown("### 🚦 Alerte Active")
             
@@ -312,7 +377,7 @@ if page == "📊 Dashboard":
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("În Backlog Refinement", data.get('backlog_refinement', 0))
-                    st.metric("Cu Specs Complete", data.get('with_ac', 0))
+                    st.metric("Cu AC Complete", data.get('with_ac', 0))
                     st.metric("Tichete Suport", data.get('support', 0))
                 
                 with col2:
@@ -328,7 +393,7 @@ if page == "📊 Dashboard":
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric("În Backlog Refinement", data.get('backlog_refinement', 0))
-                    st.metric("Cu Specs Complete", data.get('with_ac', 0))
+                    st.metric("Cu AC Complete", data.get('with_ac', 0))
                     st.metric("Tichete Suport", data.get('support', 0))
                 
                 with col2:
@@ -354,10 +419,12 @@ elif page == "📅 Upload Calendar":
         2. Schimbă view la **Week View** (vizualizare săptămână)
         3. Fă screenshot la săptămâna curentă (Luni - Vineri)
         4. Uploadează imaginea mai jos SAU folosește text manual
+        
+        **💡 Tip:** Text manual e mai rapid și mai precis decât OCR!
         """)
     
     with col2:
-        st.info("💡 **Tip:** OCR funcționează, dar text manual e mai precis!")
+        st.info("💡 **Formatare:** Fiecare ZI și MEETING pe linie separată!")
     
     st.markdown("---")
     
@@ -416,21 +483,36 @@ elif page == "📅 Upload Calendar":
     st.markdown("---")
     
     # Option 2: Manual text (ALWAYS AVAILABLE)
-    st.markdown("#### Opțiunea 2: Text Manual (Recomandat - mai rapid și mai precis)")
+    st.markdown("#### Opțiunea 2: Text Manual ⭐ (Recomandat - mai rapid și mai precis)")
+    
+    st.info("""
+    **Format corect:**
+    - Fiecare **ZI** pe linie separată
+    - Fiecare **MEETING** pe linie separată
+    - Lasă linie goală între meetinguri
+    
+    Exemplu:
+    ```
+    Monday
+    10:30 - Weekly BI
+    
+    Thursday
+    BI Refinement
+    ```
+    """)
     
     calendar_text = st.text_area(
         "Copiază și paste textul din calendar:",
         height=200,
-        placeholder="""Exemplu:
+        placeholder="""Monday
+10:30 - Weekly BI
+
 Thursday
-16
-Data Platform Update Microsoft Teams
-DWH - Backlog refinement Microsoft Teams Meeting
-Friday
-17
-BI Backlog Refinement Microsoft Teams Meeting
-""",
-        help="Copiază direct din Outlook",
+11:40 - BI Refinement
+
+Thursday
+15:00 - DWH Refinement""",
+        help="Fiecare zi și meeting pe linie separată",
         key="manual_calendar_text"
     )
     
@@ -477,9 +559,9 @@ elif page == "🎯 Jira Status":
             )
             
             bi_with_ac = st.number_input(
-                "Dintre acestea, câte specs complete?",
+                "Dintre acestea, câte au AC complete?",
                 min_value=0,
-                max_value=bi_backlog_ref,
+                max_value=bi_backlog_ref if bi_backlog_ref > 0 else 100,
                 value=st.session_state.jira_data.get('BI', {}).get('with_ac', 0),
                 help="Acceptance Criteria completate în format Given/When/Then"
             )
@@ -513,6 +595,8 @@ elif page == "🎯 Jira Status":
                 'in_sprint_not_started': bi_in_sprint,
                 'support': bi_support
             }
+            # Reset alert shown when data changes
+            st.session_state.alert_shown = False
             st.success("✅ Date BI salvate!")
     
     with tab2:
@@ -530,7 +614,7 @@ elif page == "🎯 Jira Status":
             dwh_with_ac = st.number_input(
                 "Dintre acestea, câte au AC complete?",
                 min_value=0,
-                max_value=dwh_backlog_ref,
+                max_value=dwh_backlog_ref if dwh_backlog_ref > 0 else 100,
                 value=st.session_state.jira_data.get('DWH', {}).get('with_ac', 0)
             )
             
@@ -561,6 +645,8 @@ elif page == "🎯 Jira Status":
                 'in_sprint_not_started': dwh_in_sprint,
                 'support': dwh_support
             }
+            # Reset alert shown when data changes
+            st.session_state.alert_shown = False
             st.success("✅ Date DWH salvate!")
     
     st.markdown("---")
@@ -692,6 +778,6 @@ elif page == "📤 Export Raport":
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ Info")
-st.sidebar.caption("BA Priority Alert System v1.2")
-st.sidebar.caption("OCR Support: ✅ Enabled")
+st.sidebar.caption("BA Priority Alert System v1.3")
+st.sidebar.caption("✅ OCR Enabled | ✅ Toast Alerts")
 st.sidebar.caption("© 2026 Data Platform Team")
