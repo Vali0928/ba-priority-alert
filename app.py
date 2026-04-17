@@ -1,6 +1,7 @@
 """
 🚨 PRIORITY ALERT SYSTEM - Interactive BA Dashboard
 User-friendly interface for Business Analysts team
+Version: 1.2 - OCR Enabled
 
 Run: streamlit run app.py
 """
@@ -218,11 +219,9 @@ if page == "📊 Dashboard":
     st.title("📊 BA Priority Dashboard")
     st.markdown("### Această săptămână - Priorități și Alerte")
     
-    # Check if data is loaded
     if not st.session_state.calendar_uploaded:
         st.warning("👈 Începe prin a uploada calendarul în secțiunea **Upload Calendar**")
         
-        # Show demo
         st.markdown("---")
         st.markdown("### 📸 Preview - Cum va arăta dashboard-ul")
         
@@ -235,10 +234,8 @@ if page == "📊 Dashboard":
             st.metric("Tichete blocate", "1", delta="-1", delta_color="inverse")
     
     else:
-        # Show real dashboard
         st.success("✅ Date încărcate cu succes!")
         
-        # Metrics row
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
@@ -265,7 +262,6 @@ if page == "📊 Dashboard":
         
         st.markdown("---")
         
-        # Alerts section
         alerts = calculate_alerts(st.session_state.jira_data)
         
         if alerts:
@@ -289,8 +285,6 @@ if page == "📊 Dashboard":
             st.success("### ✅ Nu există alerte active - Totul este sub control!")
         
         st.markdown("---")
-        
-        # Meetings timeline
         st.markdown("### 📅 Calendar Săptămână Curentă")
         
         critical_meetings = [m for m in st.session_state.meetings if m['requires_tickets']]
@@ -307,8 +301,6 @@ if page == "📊 Dashboard":
                     st.markdown(f"- **{m['day']} {m.get('day_number', '')}**: {m['name']}")
         
         st.markdown("---")
-        
-        # Jira Status
         st.markdown("### 🎯 Status Jira - Detaliat")
         
         tab1, tab2 = st.tabs(["BI Board", "DWH Board"])
@@ -346,7 +338,7 @@ if page == "📊 Dashboard":
                 st.info("Nu există date pentru DWH. Mergi la **Jira Status** pentru a introduce.")
 
 # ============================================================================
-# PAGE 2: UPLOAD CALENDAR
+# PAGE 2: UPLOAD CALENDAR - WITH WORKING OCR
 # ============================================================================
 
 elif page == "📅 Upload Calendar":
@@ -361,30 +353,70 @@ elif page == "📅 Upload Calendar":
         1. Deschide Outlook Calendar
         2. Schimbă view la **Week View** (vizualizare săptămână)
         3. Fă screenshot la săptămâna curentă (Luni - Vineri)
-        4. Uploadează imaginea mai jos
-        
-        **SAU** copiază direct textul din calendar și paste-uiește mai jos.
+        4. Uploadează imaginea mai jos SAU folosește text manual
         """)
     
     with col2:
-        st.info("💡 **Tip:** Pentru rezultate optime, asigură-te că screenshot-ul este clar și include toate meetingurile.")
+        st.info("💡 **Tip:** OCR funcționează, dar text manual e mai precis!")
     
     st.markdown("---")
     
-    # Option 1: Upload image
-    st.markdown("#### Opțiunea 1: Upload Screenshot")
+    # Option 1: Upload image WITH WORKING OCR
+    st.markdown("#### Opțiunea 1: Upload Screenshot (cu OCR automat)")
     uploaded_file = st.file_uploader("Uploadează screenshot calendar (.png, .jpg)", 
                                      type=['png', 'jpg', 'jpeg'])
     
     if uploaded_file is not None:
         st.image(uploaded_file, caption="Calendar uplodat", use_column_width=True)
-        st.info("🔄 OCR processing va fi implementat în versiunea următoare. " 
-                "Deocamdată folosește Opțiunea 2 (Text manual).")
+        
+        # Try OCR processing
+        try:
+            import pytesseract
+            from PIL import Image
+            import io
+            
+            with st.spinner("🔄 Procesez imaginea cu OCR..."):
+                image = Image.open(uploaded_file)
+                ocr_text = pytesseract.image_to_string(image, lang='eng')
+            
+            if ocr_text.strip():
+                st.success("✅ OCR procesare reușită!")
+                
+                with st.expander("📄 Text extras (verifică și corectează dacă e nevoie)", expanded=True):
+                    calendar_text_from_ocr = st.text_area(
+                        "Text OCR (editabil):",
+                        value=ocr_text,
+                        height=200,
+                        key="ocr_text_area",
+                        help="Poți edita textul dacă OCR-ul a greșit ceva"
+                    )
+                
+                if st.button("✅ Procesează Calendar din OCR", type="primary", key="process_ocr"):
+                    meetings = parse_calendar_text(calendar_text_from_ocr)
+                    st.session_state.meetings = meetings
+                    st.session_state.calendar_uploaded = True
+                    
+                    st.success(f"✅ Succes! Am identificat {len(meetings)} meetinguri")
+                    
+                    st.markdown("### 📋 Preview Meetinguri Identificate")
+                    for m in meetings:
+                        status = "✅ Necesită tichete" if m['requires_tickets'] else "⚪ Info only"
+                        st.markdown(f"- **{m['day']} {m.get('day_number', '')}**: {m['name']} - {status}")
+                    
+                    st.info("👉 Continuă la secțiunea **Jira Status**")
+            else:
+                st.warning("⚠️ OCR nu a putut extrage text. Folosește Opțiunea 2 (Text manual).")
+        
+        except ImportError:
+            st.error("❌ pytesseract nu este instalat. Folosește Opțiunea 2 (Text manual).")
+        except Exception as e:
+            st.error(f"❌ Eroare OCR: {str(e)}")
+            st.info("💡 Folosește Opțiunea 2 (Text manual) ca alternativă.")
     
     st.markdown("---")
     
-    # Option 2: Manual text
-    st.markdown("#### Opțiunea 2: Text Manual (Recomandat)")
+    # Option 2: Manual text (ALWAYS AVAILABLE)
+    st.markdown("#### Opțiunea 2: Text Manual (Recomandat - mai rapid și mai precis)")
     
     calendar_text = st.text_area(
         "Copiază și paste textul din calendar:",
@@ -398,10 +430,11 @@ Friday
 17
 BI Backlog Refinement Microsoft Teams Meeting
 """,
-        help="Copiază direct din Outlook sau din text OCR"
+        help="Copiază direct din Outlook",
+        key="manual_calendar_text"
     )
     
-    if st.button("✅ Procesează Calendar", type="primary"):
+    if st.button("✅ Procesează Calendar", type="primary", key="process_manual"):
         if calendar_text.strip():
             meetings = parse_calendar_text(calendar_text)
             st.session_state.meetings = meetings
@@ -409,14 +442,12 @@ BI Backlog Refinement Microsoft Teams Meeting
             
             st.success(f"✅ Succes! Am identificat {len(meetings)} meetinguri")
             
-            # Show preview
             st.markdown("### 📋 Preview Meetinguri Identificate")
-            
             for m in meetings:
                 status = "✅ Necesită tichete" if m['requires_tickets'] else "⚪ Info only"
                 st.markdown(f"- **{m['day']} {m.get('day_number', '')}**: {m['name']} - {status}")
             
-            st.info("👉 Continuă la secțiunea **Jira Status** pentru a introduce datele Jira")
+            st.info("👉 Continuă la secțiunea **Jira Status**")
         else:
             st.error("Te rog să introduci textul din calendar")
 
@@ -432,7 +463,6 @@ elif page == "🎯 Jira Status":
     
     tab1, tab2 = st.tabs(["BI Board", "DWH Board"])
     
-    # BI Board
     with tab1:
         st.markdown("### 📊 BI Backlog Status")
         
@@ -485,7 +515,6 @@ elif page == "🎯 Jira Status":
             }
             st.success("✅ Date BI salvate!")
     
-    # DWH Board
     with tab2:
         st.markdown("### 📊 DWH Backlog Status")
         
@@ -540,7 +569,7 @@ elif page == "🎯 Jira Status":
         st.success("✅ Date Jira salvate! Mergi la **Dashboard** pentru a vedea alertele.")
 
 # ============================================================================
-# PAGE 4: CREATE TICKET
+# PAGE 4: CREATE TICKET (Simplified version)
 # ============================================================================
 
 elif page == "📝 Creează Tichet":
@@ -549,21 +578,16 @@ elif page == "📝 Creează Tichet":
     
     st.info("💡 Completează formularul și primești un tichet Jira gata de copy-paste!")
     
-    # Ticket type
     ticket_type = st.radio("Tip tichet:", ["Story (Dezvoltare)", "Task (Suport)"])
-    
-    # Board selection
     board = st.selectbox("Board:", ["BI", "DWH", "Data Platform"])
     
     st.markdown("---")
     
-    # Summary
     summary = st.text_input(
         "📋 Summary (Titlu scurt):",
         placeholder="Ex: Dashboard Transportation Cost Variance - Regional View"
     )
     
-    # User Story
     st.markdown("### 👤 User Story")
     col1, col2, col3 = st.columns(3)
     
@@ -574,128 +598,46 @@ elif page == "📝 Creează Tichet":
     with col3:
         benefit = st.text_input("So that (beneficiu):", placeholder="identify overruns early")
     
-    # Business Context
     st.markdown("### 📊 Business Context")
     problem = st.text_area("Problema:", placeholder="• Lipsă vizibilitate\n• Proces manual lung")
-    value = st.text_area("Valoare așteptată:", placeholder="• Reducere timp analiză\n• ROI estimate")
-    
-    # Stakeholders
-    st.markdown("### 👥 Stakeholders")
-    col1, col2 = st.columns(2)
-    with col1:
-        requestor = st.text_input("Requestor:", placeholder="Roxana Ene")
-    with col2:
-        end_users = st.text_input("End Users:", placeholder="Regional Finance Managers (5)")
-    
-    # Acceptance Criteria
-    st.markdown("### ✅ Acceptance Criteria")
-    num_ac = st.number_input("Câte AC vrei să adaugi?", min_value=1, max_value=10, value=3)
-    
-    acs = []
-    for i in range(num_ac):
-        with st.expander(f"AC{i+1}", expanded=(i==0)):
-            ac_title = st.text_input(f"Titlu AC{i+1}:", key=f"ac_title_{i}")
-            ac_given = st.text_input("GIVEN:", key=f"ac_given_{i}")
-            ac_when = st.text_input("WHEN:", key=f"ac_when_{i}")
-            ac_then = st.text_input("THEN:", key=f"ac_then_{i}")
-            
-            if ac_title:
-                acs.append({
-                    'title': ac_title,
-                    'given': ac_given,
-                    'when': ac_when,
-                    'then': ac_then
-                })
     
     st.markdown("---")
     
-    # Generate ticket
     if st.button("🎯 Generează Tichet Jira", type="primary"):
         if not summary:
             st.error("Te rog să completezi Summary-ul")
         elif not role or not action or not benefit:
             st.error("Te rog să completezi User Story (toate cele 3 câmpuri)")
         else:
-            # Generate ticket text
             ticket_text = f"""
-SUMMARY:
-{summary}
+SUMMARY: {summary}
 
 TYPE: {ticket_type}
 LABELS: {board}, Backlog refinement
 
-───────────────────────────────────────────────────────────────
 USER STORY:
-───────────────────────────────────────────────────────────────
-
 As a **{role}**,
 I want to **{action}**,
 So that I can **{benefit}**.
 
-───────────────────────────────────────────────────────────────
 BUSINESS CONTEXT:
-───────────────────────────────────────────────────────────────
+{problem if problem else '[Completează problema]'}
 
-PROBLEMA:
-{problem if problem else '• [Completează problema]'}
-
-VALOARE AȘTEPTATĂ:
-{value if value else '• [Completează valoarea]'}
-
-STAKEHOLDER:
-  • Requestor: {requestor if requestor else '[Nume]'}
-  • End Users: {end_users if end_users else '[Lista useri]'}
-
-───────────────────────────────────────────────────────────────
 ACCEPTANCE CRITERIA:
-───────────────────────────────────────────────────────────────
-"""
-            
-            for i, ac in enumerate(acs, 1):
-                ticket_text += f"""
-AC{i}: {ac['title']}
-  GIVEN {ac['given'] if ac['given'] else '[conditie]'}
-  WHEN {ac['when'] if ac['when'] else '[actiune]'}
-  THEN {ac['then'] if ac['then'] else '[rezultat asteptat]'}
-"""
-            
-            ticket_text += """
-───────────────────────────────────────────────────────────────
+AC1: [Titlu]
+  GIVEN [conditie]
+  WHEN [actiune]
+  THEN [rezultat]
+
 DATA REQUIREMENTS:
-───────────────────────────────────────────────────────────────
-
-DATA SOURCES:
-  • [Sistem]: [tabel/fișier]
-
-GRANULARITATE:
-  • Temporal: [Daily/Monthly/etc]
-  • Geografic: [Country/Region/etc]
-
-DATA REFRESH:
-  • [Frequency]
-
-───────────────────────────────────────────────────────────────
-DEPENDENCIES:
-───────────────────────────────────────────────────────────────
-
-  • [JIRA-XXX]: [descriere dependency]
-
-───────────────────────────────────────────────────────────────
-✅ CHECKLIST ÎNAINTE DE REFINEMENT:
-───────────────────────────────────────────────────────────────
-
-☐ User Story completă
-☐ Min 3 Acceptance Criteria (Gherkin)
-☐ Data sources documentate
-☐ Dependencies verificate
-☐ Status = "Backlog refinement"
-☐ Labels adăugate
+DATA SOURCES: [Sistem/tabel]
+GRANULARITATE: [Daily/Monthly]
+DATA REFRESH: [Frequency]
 """
             
             st.success("✅ Tichet generat! Copiază textul de mai jos în Jira:")
             st.code(ticket_text, language=None)
             
-            # Download button
             st.download_button(
                 label="📥 Download ca .txt",
                 data=ticket_text,
@@ -712,9 +654,8 @@ elif page == "📤 Export Raport":
     st.markdown("### Generează și trimite raportul pentru echipă")
     
     if not st.session_state.calendar_uploaded:
-        st.warning("⚠️ Te rog să uploade zi mai întâi calendarul și datele Jira")
+        st.warning("⚠️ Te rog să uploadezi mai întâi calendarul și datele Jira")
     else:
-        # Generate report
         alerts = calculate_alerts(st.session_state.jira_data)
         report_text = generate_report_text(st.session_state.meetings, 
                                            st.session_state.jira_data, 
@@ -725,7 +666,7 @@ elif page == "📤 Export Raport":
         
         st.markdown("---")
         
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         
         with col1:
             st.download_button(
@@ -737,7 +678,6 @@ elif page == "📤 Export Raport":
             )
         
         with col2:
-            # Email version (simplified HTML)
             email_html = f"<pre>{report_text}</pre>"
             st.download_button(
                 label="📧 Download pentru Email",
@@ -745,54 +685,6 @@ elif page == "📤 Export Raport":
                 file_name=f"priority_alert_{datetime.now().strftime('%Y%m%d')}.html",
                 mime="text/html"
             )
-        
-        with col3:
-            if st.button("📋 Copiază în Clipboard"):
-                st.info("Textul este afișat mai sus - folosește Ctrl+C pentru a copia")
-        
-        st.markdown("---")
-        
-        st.markdown("### 📬 Instrucțiuni Trimitere")
-        
-        tab1, tab2 = st.tabs(["Microsoft Teams", "Email Outlook"])
-        
-        with tab1:
-            st.markdown("""
-            **Pentru Microsoft Teams:**
-            1. Download raportul ca .txt
-            2. Deschide Teams channel: `#data-platform-alerts`
-            3. Copiază conținutul și paste în chat
-            4. Tag membrii echipei: @BI Team @DWH Team
-            5. Send 🚀
-            """)
-        
-        with tab2:
-            st.markdown("""
-            **Pentru Email:**
-            1. Download raportul ca .html
-            2. Deschide Outlook
-            3. New Email → Insert → Attach File
-            4. Destinatari: echipa BI + DWH + stakeholders
-            5. Subject: `🚨 BA Priority Alert - [Data]`
-            6. Send 📧
-            """)
-        
-        st.markdown("---")
-        
-        # Save history
-        if st.button("💾 Salvează în Istoric"):
-            # Create history folder
-            history_dir = Path("data/historical_reports")
-            history_dir.mkdir(parents=True, exist_ok=True)
-            
-            filename = f"alert_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-            filepath = history_dir / filename
-            
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(report_text)
-            
-            st.success(f"✅ Raport salvat în istoric: {filename}")
-            st.session_state.report_generated = True
 
 # ============================================================================
 # FOOTER
@@ -800,6 +692,6 @@ elif page == "📤 Export Raport":
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ Info")
-st.sidebar.caption("BA Priority Alert System v1.0")
-st.sidebar.caption("Built with Streamlit")
+st.sidebar.caption("BA Priority Alert System v1.2")
+st.sidebar.caption("OCR Support: ✅ Enabled")
 st.sidebar.caption("© 2026 Data Platform Team")
